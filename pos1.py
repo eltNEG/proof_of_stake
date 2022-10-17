@@ -1,52 +1,14 @@
-"""
-    Python implementation of POW
-    Credit: https://github.com/mycoralhealth/blockchain-tutorial
-"""
-# verify buyer => 
-# full payment 
-# partial payment
-
-
 from datetime import datetime
 import time
 import hashlib
-import json, requests
+import json
+import requests
 from random import randint
-
-
-DATE = datetime.now()
-GENESIS_BLOCK = {
-    "Index": 0,
-    "Timestamp": str(DATE),
-    "BPM": 0, #instead of transactions
-    "PrevHash": "",
-    "Validator": "" #address to receive the reward {validator, weight, age}
-}
-# GENESIS_BLOCK2 = {
-#     "Index": 0,
-#     "Timestamp": str(DATE),
-#     "BPM": 0, #instead of transactions
-#     "PrevHash": "",
-#     "Validator": "" #address to receive the reward {validator, weight, age}
-# }
-# GENESIS_BLOCK3 = {
-#     "Index": 0,
-#     "Timestamp": str(DATE),
-#     "BPM": 0, #instead of transactions
-#     "PrevHash": "",
-#     "Validator": "" #address to receive the reward {validator, weight, age}
-# }
-
-# GENESIS_BLOCK4 = {
-#     "Index": 0,
-#     "Timestamp": str(DATE),
-#     "BPM": 0, #instead of transactions
-#     "PrevHash": "",
-#     "Validator": "" #address to receive the reward {validator, weight, age}
-# }
-
-# Python code for implemementing Merkle Tree
 from typing import List
+import random
+
+#from rsa import PublicKey
+
 
 class Node:
     def __init__(self, privKey, public_key, weight, age):
@@ -59,122 +21,152 @@ class Node:
 
     def __str__(self):
         return str(self.public_key)
-    
+
     def copy(self):
         return Node(self.private_key, self.public_key, self.weight, self.age)
 
     def isValid(self):
-        if( self.private_key != None and self.public_key != None and self.weight != None and self.age != None ):
+        if(self.private_key != None and self.public_key != None and self.weight != None and self.age != None):
             return False
         return True
-    
-    def register(self):
-        print("Enter new node details for registration")
-        self.private_key = input("Enter private key: ")
-        if( self.isValid() ):
-            return False
-        return True
-	
+
     def hash(self):
         return hashlib.sha256(str(self.private_key).encode('utf-8')).hexdigest()
-    
-	
+
+
 class MerkleTree:
-	def __init__(self, values: List[str]) -> None:
-		self.__buildTree(values)
+    def __init__(self, values: List[str]) -> None:
+        self.__buildTree(values)
 
-	def __buildTree(self, values: List[str]) -> None:
+    def __buildTree(self, values: List[str]) -> None:
 
-		leaves: List[Node] = [Node(None, None, Node.hash(e), e) for e in values]
-		if len(leaves) % 2 == 1:
-			leaves.append(leaves[-1].copy()) # duplicate last elem if odd number of elements
-		self.root: Node = self.__buildTreeRec(leaves)
+        leaves: List[Node] = [Node(None, None, Node.hash(e), e)
+                              for e in values]
+        if len(leaves) % 2 == 1:
+            # duplicate last elem if odd number of elements
+            leaves.append(leaves[-1].copy())
+        self.root: Node = self.__buildTreeRec(leaves)
 
-	def __buildTreeRec(self, nodes: List[Node]) -> Node:
-		if len(nodes) % 2 == 1:
-			nodes.append(nodes[-1].copy()) # duplicate last elem if odd number of elements
-		half: int = len(nodes) // 2
+    def __buildTreeRec(self, nodes: List[Node]) -> Node:
+        if len(nodes) % 2 == 1:
+            # duplicate last elem if odd number of elements
+            nodes.append(nodes[-1].copy())
+        half: int = len(nodes) // 2
 
-		if len(nodes) == 2:
-			return Node(nodes[0], nodes[1], Node.hash(nodes[0].value + nodes[1].value), nodes[0].content+"+"+nodes[1].content)
+        if len(nodes) == 2:
+            return Node(nodes[0], nodes[1], Node.hash(nodes[0].value + nodes[1].value), nodes[0].content+"+"+nodes[1].content)
 
-		left: Node = self.__buildTreeRec(nodes[:half])
-		right: Node = self.__buildTreeRec(nodes[half:])
-		value: str = Node.hash(left.value + right.value)
-		content: str = f'{left.content}+{right.content}'
-		return Node(left, right, value, content)
+        left: Node = self.__buildTreeRec(nodes[:half])
+        right: Node = self.__buildTreeRec(nodes[half:])
+        value: str = Node.hash(left.value + right.value)
+        content: str = f'{left.content}+{right.content}'
+        return Node(left, right, value, content)
 
-	def printTree(self) -> None:
-		self.__printTreeRec(self.root)
-		
-	def __printTreeRec(self, node: Node) -> None:
-		if node != None:
-			if node.left != None:
-				print("Left: "+str(node.left))
-				print("Right: "+str(node.right))
-			else:
-				print("Input")
-				
-			if node.is_copied:
-				print('(Padding)')
-			print("Value: "+str(node.value))
-			print("Content: "+str(node.content))
-			print("")
-			self.__printTreeRec(node.left)
-			self.__printTreeRec(node.right)
+    def printTree(self) -> None:
+        self.__printTreeRec(self.root)
 
-	def getRootHash(self) -> str:
-	    return self.root.value
+    def __printTreeRec(self, node: Node) -> None:
+        if node != None:
+            if node.left != None:
+                print("Left: "+str(node.left))
+                print("Right: "+str(node.right))
+            else:
+                print("Input")
 
-# def mixmerkletree() -> None:
-# 	elems = ["GeeksforGeeks", "A", "Computer", "Science", "Portal", "For", "Geeks"]
-# 	#as there are odd number of inputs, the last input is repeated
-# 	print("Inputs: ")
-# 	print(*elems, sep=" | ")
-# 	print("")
-# 	mtree = MerkleTree(elems)
-# 	print("Root Hash: "+mtree.getRootHash()+"\n")
-# 	mtree.printTree()
+            if node.is_copied:
+                print('(Padding)')
+            print("Value: "+str(node.value))
+            print("Content: "+str(node.content))
+            print("")
+            self.__printTreeRec(node.left)
+            self.__printTreeRec(node.right)
 
-
-# mixmerkletree()
+    def getRootHash(self) -> str:
+        return self.root.value
 
 
 class Transaction():
     """Transaction class"""
-    def __init__(self, seller, buyer, amount, timestamp):
+
+    def __init__(self, seller, buyer, propertyId, amount, timestamp):
         self.seller = seller
         self.buyer = buyer
         self.amount = amount
         self.timestamp = timestamp
-    
-    def getNodes(self):
-        return [self.seller, self.buyer]
-    
-    def getSignature(self):
-        return 
+        self.propertyId = propertyId
+        self.history = []
 
-    def isValid(self):
-        
+    def setSeller(self):
+        pubKeySel = input("Enter seller's public key: ")
+        privKeySel = input("Enter seller's private key: ")
 
+        seller = Node(privKeySel, pubKeySel, 0, 0)
+        return seller
 
+    def setBuyer(self):
+        pubKeyBuy = input("Enter buyer's public key: ")
+        privKeyBuy = input("Enter buyer's private key: ")
 
+        buyer = Node(privKeyBuy, pubKeyBuy, 0, 0)
+        return buyer
+
+    def registerForTransactions(self, details):
+        details = input("Enter new node details for registration: ")
+        self.public_key = hashlib.sha1(details.encode('utf-8')).hexdigest()
+
+        key = input("Enter private key: ")
+        if(key == self.setSeller().private_key or key == self.setBuyer().private_key):
+            return self.public_key
+        return False
+
+    def authorize(self):
+        pubKey = self.setSeller().public_key
+
+        tsignature = self.registerForTransactions(self.setSeller())
+        if(tsignature == pubKey):
+            return True
+        return False
+        # verify signature
+
+        # signature = checkSignature(transaction body, public key)
+
+        # tsignature === signature ? true : false
+
+    def sign(self, privKeySel, privKeyBuy, number):
+
+        return hashlib.blake2b(digest_size=16, key=privKeySel + privKeyBuy + number).digest()
+        # sign transaction
+
+    def signTransaction(self):
+        # public key, private key
+        self.history.append({"seller": self.seller, "publicKey": self.setSeller().public_key, "timestamp": self.timestamp})
+
+        nonce = random.randint(1, 10)  # random number
+
+        signature = self.sign(self.setSeller().private_key,
+                              self.setBuyer().private_key, nonce)
+        return signature
 
 
 class Block():
-    def __init__(self, timeStamp, merkleroot, prevhash, transactions):
+    def __init__(self, timeStamp, merkleroot, prevhash, transactions=[]):
         self.timeStamp = timeStamp
         self.merkleroot = merkleroot
         self.prevhash = prevhash
         self.nonce = 0
         self.transactions = transactions
-        
 
-    
+    def addTransactions(self, transaction):
+        if (transaction.authorize() and transaction.signTransaction()):
+            self.transactions.append(transaction)
+            return True
+        return False
+
+    def getHash(self):
+        return hashlib.sha256(str(self.timeStamp).encode('utf-8') + str(self.merkleroot).encode('utf-8') + str(self.prevhash).encode('utf-8') + str(self.nonce).encode('utf-8')).hexdigest()
 
 
-class Blockchain(object):
-    
+class Blockchain():
 
     def __init__(self, _genesisBlock, account):
         """
@@ -182,10 +174,10 @@ class Blockchain(object):
         """
         self.blockChain = []
         self.tempBlocks = []
-        #self.candidateBlocks = [] #constains block
+        # self.candidateBlocks = [] #constains block
         self.myCurrBlock = {}
         #self.announcements = []
-        self.validators = set() # stakers and balance
+        self.validators = set()  # stakers and balance
         #self.unconfirmed_txns = []
         self.nodes = set()
         self.myAccount = {'Address': '', 'Weight': 0, 'Age': 0}
@@ -202,7 +194,7 @@ class Blockchain(object):
 
     def is_block_valid(self, block, prevBlock={}):
         try:
-            _hash = block.pop('Hash')
+            _hash = block['Hash']
         except KeyError as e:
             return False
         try:
@@ -210,9 +202,12 @@ class Blockchain(object):
             assert _hash == hash2
         except AssertionError as e:
             return False
-            
+
         prevHash = prevBlock['Hash'] if prevBlock else ''
         block['Hash'] = _hash
+        # obj of merkel tree
+        obj_mrkl_tree = MerkleTree(block['Transactions'])
+        obj_mrkl_tree.getRootHash()
         if self.blockChain:
             prevHash = self.blockChain[-1]['Hash'] if not prevHash else prevHash
             try:
@@ -231,11 +226,12 @@ class Blockchain(object):
             return self.myCurrBlock
         prevHash = self.blockChain[-1]['Hash']
         index = len(self.blockChain) if not oldBlock else oldBlock['Index'] + 1
-        address =  self.get_validator(self.myAccount) if not address else address
+        address = self.get_validator(
+            self.myAccount) if not address else address
         newBlock = {
             "Index": index,
             "Timestamp": str(datetime.now()),
-            "BPM": bpm, #instead of transactions
+            "BPM": bpm,  # instead of transactions
             "PrevHash": prevHash,
             "Validator": address
         }
@@ -250,8 +246,8 @@ class Blockchain(object):
                 #resp = requests.get('http://{}/newblock'.format(node))
                 node.add_another_block(self.myCurrBlock)
                 resp = node.generate_new_block()
-                if self.is_block_valid(resp): #resp.json()
-                    #self.tempBlocks.append(resp.json())
+                if self.is_block_valid(resp):  # resp.json()
+                    # self.tempBlocks.append(resp.json())
                     if not resp['Validator'] in self.validators:
                         self.tempBlocks.append(resp)
                         self.validators.add(resp['Validator'])
@@ -261,7 +257,6 @@ class Blockchain(object):
             if not another_block['Validator'] in self.validators:
                 self.tempBlocks.append(another_block)
                 self.validators.add(another_block['Validator'])
-
 
     def pick_winner(self):
         """Creates a lottery pool of validators and choose the validator
@@ -298,7 +293,8 @@ class Blockchain(object):
         #pick winner
         """
 
-        print(str(self.myAccount) + ' =======================> Getting Valid chain\n')
+        print(str(self.myAccount) +
+              ' =======================> Getting Valid chain\n')
         self.resolve_conflict()
         self._pos()
         print('***Calling other nodes to announce theirs***' + "\n")
@@ -317,39 +313,25 @@ class Blockchain(object):
         for node in self.nodes:
             node.add_new_block(new_block)
         print('Process ends' + "\n")
-        
+
     def announce_winner(self):
         self.blockChain.append(self.myCurrBlock)
 
     def add_new_block(self, block):
         if self.is_block_valid(block):
-            #check index too
+            # check index too
             self.blockChain.append(block)
             acct = block['Validator'].rsplit(', ')
             if self.myAccount['Address'] != acct[0]:
                 self.myAccount['Age'] += 1
             else:
-                self.myAccount['Weight'] += (randint(1, 10) * self.myAccount['Age'])
+                self.myAccount['Weight'] += (randint(1, 10)
+                                             * self.myAccount['Age'])
                 self.myAccount['Age'] = 0
         self.tempBlocks = []
         self.myCurrBlock = {}
         self.validators = set()
 
-
-
-    def _pos(self):
-        print("Coming from ==========================> " + str(self.myAccount) + "\n")
-        time.sleep(1)
-        print('***Generating new stake block***' + "\n")
-        time.sleep(1)
-        self.generate_new_block()
-        print('***Exchanging temporary blocks with other nodes***' + "\n")
-        time.sleep(1)
-        self.get_blocks_from_nodes()
-        print('***Picking a winner***' + "\n")
-        time.sleep(1)
-        print("Winner is =======================> " + str(self.pick_winner()) + "\n")
-    
     def resolve_conflict(self):
         for node in self.nodes:
             if len(node.blockChain) > len(self.blockChain):
@@ -368,7 +350,6 @@ class Blockchain(object):
             else:
                 return False
         return True
-
 
     def add_new_node(self, new_node):
         self.nodes.add(new_node)
@@ -390,53 +371,10 @@ class Blockchain(object):
         address = {'Address': 'eltneg', 'Weight': 50, 'Age': 0}
         address = self.get_validator(address)
         genesisblock['Index'] = 0 if not genesisblock['Index'] else genesisblock['Index']
-        genesisblock['Timestamp'] = str(datetime.now()) if not genesisblock['Timestamp'] else genesisblock['Timestamp']
+        genesisblock['Timestamp'] = str(
+            datetime.now()) if not genesisblock['Timestamp'] else genesisblock['Timestamp']
         genesisblock['BPM'] = 0 if not genesisblock['BPM'] else genesisblock['BPM']
         genesisblock['PrevHash'] = '0000000000000000'
         genesisblock['Validator'] = address if not genesisblock['Validator'] else genesisblock['Validator']
         genesisblock['Hash'] = self.hasher(genesisblock)
-        return genesisblock       
-
-def main():
-    """Run test"""
-    account = {'Address': 'eltneg', 'Weight': 50}
-    account2 = {'Address': 'account2', 'Weight': 55}
-    account3 = {'Address': 'account3', 'Weight': 43}
-    account4 = {'Address': 'account4', 'Weight': 16}
-    blockchain = Blockchain(GENESIS_BLOCK, account)
-    blockchain.generate_new_block(52)
-
-    #blockchain2 = Blockchain(GENESIS_BLOCK2, account2)
-    #blockchain3 = Blockchain(GENESIS_BLOCK3, account3)
-
-    # clients = [blockchain, blockchain2, blockchain3]
-    
-    # blockchain.add_new_node(blockchain2)
-    # blockchain.add_new_node(blockchain3)
-
-    # blockchain2.add_new_node(blockchain)
-    # blockchain2.add_new_node(blockchain3)
-
-    # blockchain.get_blocks_from_nodes()
-    # blockchain2.get_blocks_from_nodes()
-
-    # blockchain.pick_winner()
-    # #check if temp blocks are same
-
-    # blockchain.pos()
-    # blockchain2.pos()
-    # blockchain3.pos()
-
-    # blockchain4 = Blockchain(GENESIS_BLOCK4, account4)
-    # blockchain4.add_new_node(blockchain)
-    # blockchain4.add_new_node(blockchain2)
-    # blockchain4.add_new_node(blockchain3)
-    # blockchain4.pos()
-    #clients.append(blockchain4)
-    # while True:
-    #     print('============================================ \n\n')
-        #client = clients[randint(0, 3)]
-        #client.pos()
-
-if __name__ == '__main__':
-    main()
+        return genesisblock
