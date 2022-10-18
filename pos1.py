@@ -1,3 +1,4 @@
+#from asyncio.windows_events import NULL
 from datetime import datetime
 import time
 import hashlib
@@ -7,17 +8,25 @@ from random import randint
 from typing import List
 import random
 
+TRANSACTION_LIMIT = 3
+
+GENESIS_BLOCK = {
+    "Index": 0,
+    "Timestamp": str(datetime.now()),
+    "PrevHash": "0000000000000000",
+    "Validator": [],
+    "Hash": "00" + str(hashlib.sha224(b"blockchain project").hexdigest()).replace("0", ""),
+    "Transactions": []
+}
 #from rsa import PublicKey
 
 
-class Node:
+class Node():
     def __init__(self, privKey, public_key, weight, age):
         self.private_key = privKey
         self.public_key = public_key
-        self.landamt = weight
+        self.weight = weight
         self.age = age
-        self.left = None
-        self.right = None
 
     def __str__(self):
         return str(self.public_key)
@@ -34,7 +43,7 @@ class Node:
         return hashlib.sha256(str(self.private_key).encode('utf-8')).hexdigest()
 
 
-class MerkleTree:
+class MerkleTree():
     def __init__(self, values: List[str]) -> None:
         self.__buildTree(values)
 
@@ -88,45 +97,45 @@ class MerkleTree:
 class Transaction():
     """Transaction class"""
 
-    def __init__(self, seller, buyer, propertyId, amount, timestamp):
-        self.seller = seller
-        self.buyer = buyer
-        self.amount = amount
+    def __init__(self, timestamp):
+        self.seller = NULL
+        self.buyer = NULL
+        self.amount = NULL
         self.timestamp = timestamp
-        self.propertyId = propertyId
+        self.propertyId = NULL
         self.history = []
+        self.registerForTransactions()
+        self.setAmount()
+        self.setPropertyId()
+
+    def setPropertyId(self):
+        self.propertyId = input("Enter property ID: ")
+
+    def setAmount(self):
+        self.amount = input("Enter amount: ")
 
     def setSeller(self):
         pubKeySel = input("Enter seller's public key: ")
         privKeySel = input("Enter seller's private key: ")
 
-        seller = Node(privKeySel, pubKeySel, 0, 0)
-        return seller
+        self.seller = Node(privKeySel, pubKeySel, 0, 0)
 
     def setBuyer(self):
         pubKeyBuy = input("Enter buyer's public key: ")
         privKeyBuy = input("Enter buyer's private key: ")
 
-        buyer = Node(privKeyBuy, pubKeyBuy, 0, 0)
-        return buyer
+        self.buyer = Node(privKeyBuy, pubKeyBuy, 0, 0)
 
-    def registerForTransactions(self, details):
-        details = input("Enter new node details for registration: ")
-        self.public_key = hashlib.sha1(details.encode('utf-8')).hexdigest()
-
-        key = input("Enter private key: ")
-        if(key == self.setSeller().private_key or key == self.setBuyer().private_key):
-            return self.public_key
-        return False
+    def registerForTransactions(self):
+        self.setSeller()
+        self.setBuyer()
 
     def authorize(self):
-        pubKey = self.setSeller().public_key
 
-        tsignature = self.registerForTransactions(self.setSeller())
-        if(tsignature == pubKey):
+        key = input("Enter private key: ")
+        if(key == self.seller.private_key or key == self.buyer.private_key):
             return True
         return False
-        # verify signature
 
         # signature = checkSignature(transaction body, public key)
 
@@ -139,31 +148,37 @@ class Transaction():
 
     def signTransaction(self):
         # public key, private key
-        self.history.append({"seller": self.seller, "publicKey": self.setSeller().public_key, "timestamp": self.timestamp})
 
         nonce = random.randint(1, 10)  # random number
 
-        signature = self.sign(self.setSeller().private_key,
-                              self.setBuyer().private_key, nonce)
+        signature = self.sign(self.seller.private_key,
+                              self.buyer.private_key, nonce)
+        self.history.append(
+            {"pubKeyBuy": self.buyer.public_key, "publKeySel": self.seller.public_key, "timestamp": self.timestamp, "sig": signature})
         return signature
 
 
 class Block():
-    def __init__(self, timeStamp, merkleroot, prevhash, transactions=[]):
+    def __init__(self, i, timeStamp, prevhash):
+        self.index = i
         self.timeStamp = timeStamp
-        self.merkleroot = merkleroot
+        self.merkleroot = NULL
         self.prevhash = prevhash
         self.nonce = 0
-        self.transactions = transactions
+        self.transactions = []
 
-    def addTransactions(self, transaction):
-        if (transaction.authorize() and transaction.signTransaction()):
-            self.transactions.append(transaction)
+    def addTransactions(self):
+        txn = Transaction(str(datetime.now()))
+        if (txn.authorize() and len(self.transactions) < TRANSACTION_LIMIT):
+            self.transactions.append(txn.signTransaction())
             return True
         return False
 
     def getHash(self):
         return hashlib.sha256(str(self.timeStamp).encode('utf-8') + str(self.merkleroot).encode('utf-8') + str(self.prevhash).encode('utf-8') + str(self.nonce).encode('utf-8')).hexdigest()
+
+    def setMerkleRoot(self):
+        self.merkleroot = MerkleTree(self.transactions).getRootHash()
 
 
 class Blockchain():
@@ -175,11 +190,11 @@ class Blockchain():
         self.blockChain = []
         self.tempBlocks = []
         # self.candidateBlocks = [] #constains block
-        self.myCurrBlock = {}
+        self.myCurrBlock = NULL
         #self.announcements = []
-        self.validators = set()  # stakers and balance
+        self.validators = []  # stakers and balance
         #self.unconfirmed_txns = []
-        self.nodes = set()
+        self.nodes = []
         self.myAccount = {'Address': '', 'Weight': 0, 'Age': 0}
         self.myAccount['Address'] = account['Address']
         self.myAccount['Weight'] = account['Weight']
@@ -206,8 +221,8 @@ class Blockchain():
         prevHash = prevBlock['Hash'] if prevBlock else ''
         block['Hash'] = _hash
         # obj of merkel tree
-        obj_mrkl_tree = MerkleTree(block['Transactions'])
-        obj_mrkl_tree.getRootHash()
+        # obj_mrkl_tree = MerkleTree(block['Transactions'])
+        # obj_mrkl_tree.getRootHash()
         if self.blockChain:
             prevHash = self.blockChain[-1]['Hash'] if not prevHash else prevHash
             try:
@@ -221,23 +236,29 @@ class Blockchain():
         block['Hash'] = _hash
         return True
 
-    def generate_new_block(self, bpm=randint(53, 63), oldBlock='', address=''):
-        if self.myCurrBlock:
-            return self.myCurrBlock
-        prevHash = self.blockChain[-1]['Hash']
-        index = len(self.blockChain) if not oldBlock else oldBlock['Index'] + 1
-        address = self.get_validator(
-            self.myAccount) if not address else address
+    def generate_new_block(self, address=''):
+        if len(self.blockchain) > 0:
+            prevBlock = self.blockchain[-1]
+        else:
+            myCurrBlock = GENESIS_BLOCK
+        t = str(datetime.now())
+        myCurrBlock = Block(len(self.blockchain)+ 1, t, prevBlock['Hash'] )
+        for i in range(TRANSACTION_LIMIT):
+            myCurrBlock.addTransactions()
+        myCurrBlock.setMerkleRoot()
+        # currBlock.setHash()
+        # index = len(self.blockChain) if not oldBlock else oldBlock['Index'] + 1
+        address = self.get_validator(self.myAccount) if not address else address
         newBlock = {
-            "Index": index,
-            "Timestamp": str(datetime.now()),
-            "BPM": bpm,  # instead of transactions
-            "PrevHash": prevHash,
-            "Validator": address
+            "Index": len(self.blockchain)+ 1,
+            "Timestamp": t,
+            "PrevHash": prevBlock['Hash'],
+            "Validator": address,
+            "Hash": myCurrBlock.getHash(),
+            "Transactions": myCurrBlock.transactions
         }
-        newBlock["Hash"] = self.hasher(newBlock)
         assert self.is_block_valid(newBlock)
-        self.myCurrBlock = newBlock
+        self.blockchain.append(newBlock)
         return newBlock
 
     def get_blocks_from_nodes(self):
@@ -269,21 +290,21 @@ class Blockchain():
         self.tempBlocks.append(self.myCurrBlock)
         self.validators.add(self.myCurrBlock['Validator'])
         for validator in self.validators:
-            acct = (validator.rsplit(sep=', '))
-            acct.append(int(acct[1]) * int(acct[2]))
-            if winner and acct[-1]:
-                winner = acct if winner[-1] < acct[-1] else winner
+            info = (validator.rsplit(sep=', '))
+            info.append(int(info[1]) * int(info[2]))
+            if winner and info[-1]:
+                winner = info if winner[-1] < info[-1] else winner
             else:
-                winner = acct if acct[-1] else winner
+                winner = info if info[-1] else winner
         if winner:
             return winner
         for validator in self.validators:
-            acct = (validator.rsplit(sep=', '))
-            acct.append((int(acct[1]) + int(acct[2]))/len(acct[0]))
+            info = (validator.rsplit(sep=', '))
+            info.append((int(info[1]) + int(info[2]))/len(info[0]))
             if winner:
-                winner = acct if winner[-1] < acct[-1] else winner
+                winner = info if winner[-1] < info[-1] else winner
             else:
-                winner = acct
+                winner = info
         return winner
 
     def pos(self):
@@ -330,7 +351,7 @@ class Blockchain():
                 self.myAccount['Age'] = 0
         self.tempBlocks = []
         self.myCurrBlock = {}
-        self.validators = set()
+        self.validators = []
 
     def resolve_conflict(self):
         for node in self.nodes:
@@ -368,13 +389,15 @@ class Blockchain():
         return ', '.join([address['Address'], str(address['Weight']), str(address['Age'])])
 
     def generate_genesis_block(self, genesisblock):
-        address = {'Address': 'eltneg', 'Weight': 50, 'Age': 0}
+        address = {'Address': 'boombag', 'Weight': 50, 'Age': 0}
         address = self.get_validator(address)
         genesisblock['Index'] = 0 if not genesisblock['Index'] else genesisblock['Index']
         genesisblock['Timestamp'] = str(
             datetime.now()) if not genesisblock['Timestamp'] else genesisblock['Timestamp']
-        genesisblock['BPM'] = 0 if not genesisblock['BPM'] else genesisblock['BPM']
         genesisblock['PrevHash'] = '0000000000000000'
         genesisblock['Validator'] = address if not genesisblock['Validator'] else genesisblock['Validator']
         genesisblock['Hash'] = self.hasher(genesisblock)
         return genesisblock
+
+
+# def __init__():
