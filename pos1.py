@@ -36,73 +36,106 @@ class Node():
 
     def isValid(self):
         if(self.private_key != None and self.public_key != None and self.weight != None and self.age != None):
-            return False
-        return True
+            return True
+        return False
 
     def hash(self):
-        return hashlib.sha256(str(self.private_key).encode('utf-8')).hexdigest()
+        pubKey = self.public_key
+        return hashlib.sha256(pubKey).encode('utf-8').hexdigest()
 
 
-class MerkleTree():
-    def __init__(self, values: List[str]) -> None:
-        self.__buildTree(values)
+# class MerkleTree():
+#     def __init__(self, values: List[str]) -> None:
+#         self.__buildTree(values)
 
-    def __buildTree(self, values: List[str]) -> None:
+#     def __buildTree(self, values: List[str]) -> None:
 
-        leaves: List[Node] = [Node(None, None, Node.hash(e), e)
-                              for e in values]
-        if len(leaves) % 2 == 1:
-            # duplicate last elem if odd number of elements
-            leaves.append(leaves[-1].copy())
-        self.root: Node = self.__buildTreeRec(leaves)
+#         leaves: List[Node] = [Node(None, None, Node.hash(e), e)
+#                               for e in values]
+#         if len(leaves) % 2 == 1:
+#             # duplicate last elem if odd number of elements
+#             leaves.append(leaves[-1].copy())
+#         self.root: Node = self.__buildTreeRec(leaves)
 
-    def __buildTreeRec(self, nodes: List[Node]) -> Node:
-        if len(nodes) % 2 == 1:
-            # duplicate last elem if odd number of elements
-            nodes.append(nodes[-1].copy())
-        half: int = len(nodes) // 2
+#     def __buildTreeRec(self, nodes: List[Node]) -> Node:
+#         if len(nodes) % 2 == 1:
+#             # duplicate last elem if odd number of elements
+#             nodes.append(nodes[-1].copy())
+#         half: int = len(nodes) // 2
 
-        if len(nodes) == 2:
-            return Node(nodes[0], nodes[1], Node.hash(nodes[0].value + nodes[1].value), nodes[0].content+"+"+nodes[1].content)
+#         if len(nodes) == 2:
+#             return Node(nodes[0], nodes[1], Node.hash(nodes[0].value + nodes[1].value), nodes[0].content+"+"+nodes[1].content)
 
-        left: Node = self.__buildTreeRec(nodes[:half])
-        right: Node = self.__buildTreeRec(nodes[half:])
-        value: str = Node.hash(left.value + right.value)
-        content: str = f'{left.content}+{right.content}'
-        return Node(left, right, value, content)
+#         left: Node = self.__buildTreeRec(nodes[:half])
+#         right: Node = self.__buildTreeRec(nodes[half:])
+#         value: str = Node.hash(left.value + right.value)
+#         content: str = f'{left.content}+{right.content}'
+#         return Node(left, right, value, content)
 
-    def printTree(self) -> None:
-        self.__printTreeRec(self.root)
+#     def printTree(self) -> None:
+#         self.__printTreeRec(self.root)
 
-    def __printTreeRec(self, node: Node) -> None:
-        if node != None:
-            if node.left != None:
-                print("Left: "+str(node.left))
-                print("Right: "+str(node.right))
-            else:
-                print("Input")
+#     def __printTreeRec(self, node: Node) -> None:
+#         if node != None:
+#             if node.left != None:
+#                 print("Left: "+str(node.left))
+#                 print("Right: "+str(node.right))
+#             else:
+#                 print("Input")
 
-            if node.is_copied:
-                print('(Padding)')
-            print("Value: "+str(node.value))
-            print("Content: "+str(node.content))
-            print("")
-            self.__printTreeRec(node.left)
-            self.__printTreeRec(node.right)
+#             if node.is_copied:
+#                 print('(Padding)')
+#             print("Value: "+str(node.value))
+#             print("Content: "+str(node.content))
+#             print("")
+#             self.__printTreeRec(node.left)
+#             self.__printTreeRec(node.right)
 
-    def getRootHash(self) -> str:
-        return self.root.value
+#     def getRootHash(self) -> str:
+#         return self.root.value
 
+class MerkleTreeNode:
+    def _init_(self, value):
+        self.left = None
+        self.right = None
+        self.hashValue = hashlib.sha256(bytes(value, 'utf-8')).hexdigest()
+
+
+    def buildTree(leavesid):
+        leaves = []
+        for i in leavesid:
+            leaves.append(i[0])
+        # print(leaves)
+        nodes = []
+        for i in leaves:
+            nodes.append(MerkleTreeNode(i))
+
+        while len(nodes) != 1:
+            temp = []
+            for i in range(0, len(nodes), 2):
+                node1 = nodes[i]
+                if i+1 < len(nodes):
+                    node2 = nodes[i+1]
+                else:
+                    temp.append(nodes[i])
+                    break
+                concatenatedHash = node1.hashValue + node2.hashValue
+                parent = MerkleTreeNode(concatenatedHash)
+                parent.left = node1
+                parent.right = node2
+                temp.append(parent)
+            nodes = temp
+        return nodes[0].hashValue
 
 class Transaction():
     """Transaction class"""
 
     def __init__(self, timestamp):
-        self.seller = NULL
-        self.buyer = NULL
-        self.amount = NULL
+        self.seller = None
+        self.buyer = None
+        self.amount = None
         self.timestamp = timestamp
-        self.propertyId = NULL
+        self.propertyId = None
         self.history = []
         self.registerForTransactions()
         self.setAmount()
@@ -162,7 +195,7 @@ class Block():
     def __init__(self, i, timeStamp, prevhash):
         self.index = i
         self.timeStamp = timeStamp
-        self.merkleroot = NULL
+        self.merkleroot = None
         self.prevhash = prevhash
         self.nonce = 0
         self.transactions = []
@@ -178,7 +211,7 @@ class Block():
         return hashlib.sha256(str(self.timeStamp).encode('utf-8') + str(self.merkleroot).encode('utf-8') + str(self.prevhash).encode('utf-8') + str(self.nonce).encode('utf-8')).hexdigest()
 
     def setMerkleRoot(self):
-        self.merkleroot = MerkleTree(self.transactions).getRootHash()
+        self.merkleroot = MerkleTreeNode(self.transactions).getRootHash()
 
 
 class Blockchain():
@@ -190,7 +223,7 @@ class Blockchain():
         self.blockChain = []
         self.tempBlocks = []
         # self.candidateBlocks = [] #constains block
-        self.myCurrBlock = NULL
+        self.myCurrBlock = {}
         #self.announcements = []
         self.validators = []  # stakers and balance
         #self.unconfirmed_txns = []
@@ -198,14 +231,9 @@ class Blockchain():
         self.myAccount = {'Address': '', 'Weight': 0, 'Age': 0}
         self.myAccount['Address'] = account['Address']
         self.myAccount['Weight'] = account['Weight']
-        try:
-            genesisBlock = self.generate_genesis_block(_genesisBlock)
-            if self.is_block_valid(genesisBlock):
-                self.blockChain.append(genesisBlock)
-            else:
-                raise Exception('Unable to verify block')
-        except Exception as e:
-            print('Invalid genesis block.\nOR\n' + str(e))
+        genesisBlock = self.generate_genesis_block(_genesisBlock)
+        if self.is_block_valid(genesisBlock):
+            self.blockChain.append(genesisBlock)
 
     def is_block_valid(self, block, prevBlock={}):
         try:
@@ -242,29 +270,36 @@ class Blockchain():
         else:
             myCurrBlock = GENESIS_BLOCK
         t = str(datetime.now())
-        myCurrBlock = Block(len(self.blockchain)+ 1, t, prevBlock['Hash'] )
+        currBlock = Block(len(self.blockchain)+ 1, t, prevBlock['Hash'] )
+        myCurrBlock = {
+            'Index': currBlock.index,
+            'TimeStamp': currBlock.timeStamp,
+            'PrevHash': currBlock.prevhash,
+            'Hash': currBlock.getHash(),
+            'Transactions': currBlock.transactions,
+        }
         for i in range(TRANSACTION_LIMIT):
             myCurrBlock.addTransactions()
         myCurrBlock.setMerkleRoot()
         # currBlock.setHash()
         # index = len(self.blockChain) if not oldBlock else oldBlock['Index'] + 1
         address = self.get_validator(self.myAccount) if not address else address
-        newBlock = {
-            "Index": len(self.blockchain)+ 1,
-            "Timestamp": t,
-            "PrevHash": prevBlock['Hash'],
-            "Validator": address,
-            "Hash": myCurrBlock.getHash(),
-            "Transactions": myCurrBlock.transactions
-        }
-        assert self.is_block_valid(newBlock)
-        self.blockchain.append(newBlock)
-        return newBlock
+        # newBlock = {
+        #     "Index": len(self.blockchain)+ 1,
+        #     "Timestamp": t,
+        #     "PrevHash": prevBlock['Hash'],
+        #     "Validator": address,
+        #     "Hash": myCurrBlock.getHash(),
+        #     "Transactions": myCurrBlock.transactions
+        # }
+        # assert self.is_block_valid(newBlock)
+        # self.blockchain.append(newBlock)
+        self.blockChain.append(myCurrBlock)
+        return myCurrBlock
 
     def get_blocks_from_nodes(self):
         if self.nodes:
             for node in self.nodes:
-                #resp = requests.get('http://{}/newblock'.format(node))
                 node.add_another_block(self.myCurrBlock)
                 resp = node.generate_new_block()
                 if self.is_block_valid(resp):  # resp.json()
@@ -317,10 +352,11 @@ class Blockchain():
         print(str(self.myAccount) +
               ' =======================> Getting Valid chain\n')
         self.resolve_conflict()
-        self._pos()
+        #self._pos()
         print('***Calling other nodes to announce theirs***' + "\n")
-        for node in self.nodes:
-            node._pos()
+        # for node in self.nodes:
+        #     node._pos()
+        new_block = {}
         for block in self.tempBlocks:
             validator = block['Validator'].rsplit(', ')
             if validator[0] == self.pick_winner()[0]:
@@ -396,8 +432,22 @@ class Blockchain():
             datetime.now()) if not genesisblock['Timestamp'] else genesisblock['Timestamp']
         genesisblock['PrevHash'] = '0000000000000000'
         genesisblock['Validator'] = address if not genesisblock['Validator'] else genesisblock['Validator']
-        genesisblock['Hash'] = self.hasher(genesisblock)
+        genesisblock['Hash'] = "00" + str(hashlib.sha224(b"blockchain project").hexdigest()).replace("0", "")
+        genesisblock['Transactions'] = []
         return genesisblock
 
 
 # def __init__():
+for i in range(TRANSACTION_LIMIT):
+    txn = Transaction(str(datetime.now()))
+    txn.registerForTransactions()
+    txn.authorize()
+    print(txn.history)
+
+    merkleObj = MerkleTreeNode()
+    print(merkleObj)
+
+
+    bc = Blockchain(GENESIS_BLOCK, {'Address': '123456', 'Weight': 1000, 'Age': 4})
+    bc.pos()
+    print(bc.blockChain)
